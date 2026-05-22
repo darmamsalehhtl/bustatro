@@ -1,0 +1,180 @@
+/* =============================================
+   Playing Card Component Styles
+   ============================================= */
+
+.playing-card {
+  width: var(--card-width);
+  height: var(--card-height);
+  border-radius: var(--card-radius);
+  position: relative;
+  cursor: default;
+  transition: all var(--transition-med);
+  animation: cardDeal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  flex-shrink: 0;
+}
+
+.playing-card:nth-child(1) { animation-delay: 0.0s; }
+.playing-card:nth-child(2) { animation-delay: 0.1s; }
+.playing-card:nth-child(3) { animation-delay: 0.2s; }
+.playing-card:nth-child(4) { animation-delay: 0.3s; }
+.playing-card:nth-child(5) { animation-delay: 0.4s; }
+.playing-card:nth-child(6) { animation-delay: 0.5s; }
+
+.playing-card--face-up {
+  background: linear-gradient(145deg, #ffffff 0%, #f0f0f5 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.playing-card--face-down {
+  background: linear-gradient(145deg, #1a1a3e, #2a2a5e);
+  border: 2px solid rgba(0, 245, 255, 0.2);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    0 0 15px rgba(0, 245, 255, 0.1);
+}
+
+.playing-card--face-down::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 245, 255, 0.05),
+    rgba(0, 245, 255, 0.05) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.15);
+}
+
+.playing-card--swappable {
+  cursor: pointer;
+  border-color: var(--neon-orange);
+  box-shadow: 0 0 12px rgba(255, 140, 0, 0.3);
+}
+
+.playing-card--swappable:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 0 25px rgba(255, 140, 0, 0.5);
+}
+
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.card-corner--top {
+  top: 6px;
+  left: 8px;
+}
+
+.card-corner--bottom {
+  bottom: 6px;
+  right: 8px;
+  transform: rotate(180deg);
+}
+
+.card-rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.1;
+}
+
+.card-suit-small {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.card-center-suit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.2rem;
+  opacity: 0.9;
+}
+
+.card--red .card-rank,
+.card--red .card-suit-small,
+.card--red .card-center-suit {
+  color: var(--suit-red);
+}
+
+.card--black .card-rank,
+.card--black .card-suit-small,
+.card--black .card-center-suit {
+  color: #2d2d3a;
+}
+
+/* Ace value badge */
+.ace-badge {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--neon-purple);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 0 8px rgba(191, 90, 242, 0.5);
+  z-index: 2;
+}
+
+/* Bust animation */
+.playing-card--bust {
+  animation: bustShake 0.5s ease both;
+  border-color: var(--neon-red) !important;
+  box-shadow: var(--glow-red) !important;
+}
+
+/* Win highlight */
+.playing-card--winning {
+  border-color: var(--neon-green) !important;
+  box-shadow: var(--glow-green) !important;
+}
+
+/* Card bonuses overlay */
+.card-bonuses {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 3;
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.4s;
+}
+
+.card-bonus-chips,
+.card-bonus-mult {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 0.65rem;
+  padding: 2px 5px;
+  border-radius: 6px;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.card-bonus-chips {
+  background: linear-gradient(135deg, var(--neon-cyan), #00b8d4);
+  box-shadow: 0 0 8px rgba(0, 245, 255, 0.5);
+}
+
+.card-bonus-mult {
+  background: linear-gradient(135deg, var(--neon-red), #d50000);
+  box-shadow: 0 0 8px rgba(255, 59, 92, 0.5);
+}
