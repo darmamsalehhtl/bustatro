@@ -163,9 +163,10 @@ export function calculateScore(cards, aceChoices, cheats = [], handUpgrades = {}
   if (context.bossModifier === 'face_no_mult') {
     // Recalculate without face card mult
     let faceMultRemoved = 0;
+    const hasLoadedDeck = cheats.some(c => c.id === 'loaded_deck');
     for (const card of cards) {
       if (isFaceCard(card.rank)) {
-        faceMultRemoved += (hasLoadedDeck ? 5 : 1) + (cardUpgrades[card.rank]?.mult || 0);
+        faceMultRemoved += (hasLoadedDeck ? 1.5 : 0.3) + (cardUpgrades[card.rank]?.mult || 0);
       }
     }
     score.mult = Math.max(0.5, score.mult - faceMultRemoved);

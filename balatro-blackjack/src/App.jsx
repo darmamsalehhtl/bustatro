@@ -366,7 +366,29 @@ function BettingScreen({ state, onBet }) {
       )}
       <DealerHPBar current={state.dealerCurrentHP} max={state.dealerMaxHP} />
       <h2 className="betting-screen__title">Place Your Bet</h2>
-      <div className="bet-amount">${bet}</div>
+      <div className="bet-amount-container">
+        <span className="bet-amount" style={{ width: 'auto', paddingRight: '5px' }}>$</span>
+        <input 
+          type="number" 
+          className="bet-amount" 
+          value={bet}
+          onChange={(e) => {
+            const val = parseInt(e.target.value, 10);
+            if (!isNaN(val)) {
+              setBet(val);
+            } else {
+              setBet('');
+            }
+          }}
+          onBlur={() => {
+            if (bet === '') {
+              setBet(blind.minBet);
+            } else {
+              setBet(prev => Math.max(blind.minBet, Math.min(state.cash, prev)));
+            }
+          }}
+        />
+      </div>
       <div className="bet-controls">
         <button className="btn btn--small" onClick={() => adjustBet(-25)}>-25</button>
         <button className="btn btn--small" onClick={() => adjustBet(-5)}>-5</button>

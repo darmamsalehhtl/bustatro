@@ -259,9 +259,22 @@
   animation: fadeIn 0.3s ease;
 }
 .betting-screen__title { font-size: 1.3rem; font-weight: 600; color: var(--text-primary); }
+.bet-amount-container {
+  display: flex; align-items: center; justify-content: center;
+}
 .bet-amount {
   font-family: 'JetBrains Mono', monospace; font-size: 3rem; font-weight: 800;
   color: var(--neon-gold); text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  background: transparent; border: none; outline: none; text-align: center;
+  width: 180px;
+}
+.bet-amount::-webkit-outer-spin-button,
+.bet-amount::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.bet-amount[type=number] {
+  -moz-appearance: textfield;
 }
 .bet-controls { display: flex; gap: 8px; align-items: center; }
 .bet-info-row { display: flex; flex-direction: column; align-items: center; gap: 6px; }
