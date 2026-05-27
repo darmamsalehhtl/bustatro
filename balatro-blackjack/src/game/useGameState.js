@@ -285,8 +285,8 @@ export function useGameState(currentUser) {
         if (hasBustBuffer) {
           sfxCardDeal();
           
-          // Revert the ace draw
-          const revertedCards = prev.playerCards.slice(0, -1);
+          // Revert the ace draw (remove the card that caused the bust)
+          const revertedCards = prev.playerCards.filter(c => c.id !== cardId);
           const revertedAceChoices = { ...newAceChoices };
           delete revertedAceChoices[cardId];
           
@@ -552,6 +552,47 @@ export function useGameState(currentUser) {
         aceChoices[result.card.id] = 1;
       }
 
+      const total = getHandTotal(newPlayerCards, aceChoices);
+
+      if (isBust(total)) {
+        const hasBustBuffer = prev.cheats.some(c => c.id === 'bust_buffer') && !prev.bustBufferUsed;
+        if (hasBustBuffer) {
+          sfxCardDeal();
+          const bufferedCards = [...prev.playerCards];
+          bufferedCards.splice(cardIndex, 1);
+          return {
+            ...prev,
+            playerCards: bufferedCards,
+            aceChoices: { ...prev.aceChoices },
+            deck,
+            swapUsed: true,
+            swapMode: false,
+            bustBufferUsed: true,
+            cheatTrigger: { id: 'bust_buffer', emoji: '🛡️', text: 'BUST PREVENTED!', ts: Date.now() },
+          };
+        }
+
+        sfxBust();
+        return {
+          ...prev,
+          playerCards: newPlayerCards,
+          aceChoices,
+          deck,
+          swapUsed: true,
+          swapMode: false,
+          phase: PHASES.ROUND_RESULT,
+          roundResult: {
+            outcome: 'bust',
+            playerTotal: total,
+            dealerTotal: null,
+            playerScore: null,
+            dealerScore: null,
+            payout: -prev.currentBet,
+            damage: 0,
+          },
+        };
+      }
+
       return {
         ...prev,
         playerCards: newPlayerCards,
@@ -577,10 +618,13 @@ export function useGameState(currentUser) {
           dealerCards.push(result.card);
           deckRef.current = result.deck;
           sfxCardDeal();
+          // Important: Recalculate ace choices with the new card so the UI reflects the correct total
+          const newDealerAceChoices = getDealerAceChoices(dealerCards);
           return {
             ...prev,
             deck: result.deck,
             dealerCards,
+            dealerAceChoices: newDealerAceChoices,
           };
         }
       }

@@ -56,13 +56,29 @@ export const CASINO_NAMES = [
 // Dealer HP per ante per blind type
 // Blackjack = instant kill, other wins do % damage based on score
 export function getDealerHP(ante, blindType) {
-  const baseHP = {
-    small: 120,
-    big: 240,
-    boss: 400,
+  // Base HP scaling for each Ante to ensure exponential difficulty curve
+  // and strict increases between Boss of previous Ante and Small of next Ante.
+  const baseScale = [
+    120,       // Ante 1
+    450,       // Ante 2
+    1600,      // Ante 3
+    6000,      // Ante 4
+    25000,     // Ante 5
+    100000,    // Ante 6
+    400000,    // Ante 7
+    1500000    // Ante 8
+  ];
+  
+  const safeAnte = Math.min(ante, baseScale.length - 1);
+  const base = baseScale[safeAnte];
+
+  const multipliers = {
+    small: 1,
+    big: 2,
+    boss: 3.5,
   };
-  const scale = 1 + ante * 0.25; // +25% per ante
-  return Math.round(baseHP[blindType] * scale);
+
+  return Math.round(base * multipliers[blindType]);
 }
 
 // How much damage a winning hand deals (percentage of max HP turned into flat damage)
