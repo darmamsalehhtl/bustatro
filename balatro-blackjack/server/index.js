@@ -1,9 +1,12 @@
 import express from 'express';
 import db from './db.js';
+import { securityHeaders } from './security.js';
 
 const app = express();
 const PORT = 3001;
 
+app.disable('x-powered-by');
+app.use(securityHeaders);
 app.use(express.json());
 
 // Helper endpoints
