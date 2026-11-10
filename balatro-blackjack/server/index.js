@@ -1,6 +1,6 @@
 import express from 'express';
 import db from './db.js';
-import { securityHeaders } from './security.js';
+import { rateLimit, securityHeaders } from './security.js';
 import { isValidUsername, validateCredentials, validateState } from './validation.js';
 
 const app = express();
@@ -10,8 +10,10 @@ app.disable('x-powered-by');
 app.use(securityHeaders);
 app.use(express.json({ limit: '100kb' }));
 
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+
 // Helper endpoints
-app.post('/api/register', (req, res) => {
+app.post('/api/register', authLimiter, (req, res) => {
   const invalid = validateCredentials(req.body, { isRegistration: true });
   if (invalid) {
     return res.status(400).json({ error: invalid });
@@ -30,7 +32,7 @@ app.post('/api/register', (req, res) => {
   }
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', authLimiter, (req, res) => {
   if (validateCredentials(req.body)) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
