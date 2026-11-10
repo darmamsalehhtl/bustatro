@@ -1,6 +1,7 @@
 import express from 'express';
 import db from './db.js';
 import { securityHeaders } from './security.js';
+import { isValidUsername, validateCredentials, validateState } from './validation.js';
 
 const app = express();
 const PORT = 3001;
@@ -11,11 +12,11 @@ app.use(express.json({ limit: '100kb' }));
 
 // Helper endpoints
 app.post('/api/register', (req, res) => {
-  const { username, password } = req.body;
-  
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
+  const invalid = validateCredentials(req.body, { isRegistration: true });
+  if (invalid) {
+    return res.status(400).json({ error: invalid });
   }
+  const { username, password } = req.body;
 
   try {
     const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
@@ -30,8 +31,11 @@ app.post('/api/register', (req, res) => {
 });
 
 app.post('/api/login', (req, res) => {
+  if (validateCredentials(req.body)) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
   const { username, password } = req.body;
-  
+
   const stmt = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?');
   const user = stmt.get(username, password);
   
@@ -44,10 +48,14 @@ app.post('/api/login', (req, res) => {
 
 // Save game state
 app.post('/api/state', (req, res) => {
-  const { username, state } = req.body;
-  
-  if (!username || !state) {
-    return res.status(400).json({ error: 'Username and state required' });
+  const { username, state } = req.body ?? {};
+
+  if (!isValidUsername(username)) {
+    return res.status(400).json({ error: 'Invalid username' });
+  }
+  const invalidState = validateState(state);
+  if (invalidState) {
+    return res.status(400).json({ error: invalidState });
   }
 
   try {
@@ -66,7 +74,10 @@ app.post('/api/state', (req, res) => {
 // Load game state
 app.get('/api/state/:username', (req, res) => {
   const { username } = req.params;
-  
+  if (!isValidUsername(username)) {
+    return res.status(400).json({ error: 'Invalid username' });
+  }
+
   try {
     const stmt = db.prepare('SELECT state FROM game_states WHERE username = ?');
     const row = stmt.get(username);
