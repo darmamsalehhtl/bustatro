@@ -27,7 +27,7 @@ export function AuthScreen({ onLogin }) {
       const data = await response.json();
 
       if (response.ok) {
-        onLogin(username);
+        onLogin(data.username);
       } else {
         setError(data.error || 'An error occurred.');
       }

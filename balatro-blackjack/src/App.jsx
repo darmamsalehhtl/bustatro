@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGameState, PHASES } from './game/useGameState.js';
 import { ANTE_CONFIG, HANDS_PER_BLIND, SUIT_SYMBOLS } from './game/constants.js';
 import { getHandTotal, isBlackjack, isBust, getCardBonuses } from './game/engine.js';
@@ -8,17 +8,32 @@ import { AuthScreen } from './components/AuthScreens.jsx';
 import './App.css';
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem('bustatro_currentUser'));
+  // undefined while the session check is running, null when logged out
+  const [currentUser, setCurrentUser] = useState(undefined);
+
+  useEffect(() => {
+    fetch('/api/session')
+      .then(res => (res.ok ? res.json() : { username: null }))
+      .then(data => setCurrentUser(data.username))
+      .catch(err => {
+        console.error('Failed to check session:', err);
+        setCurrentUser(null);
+      });
+  }, []);
 
   const handleLogin = (user) => {
-    localStorage.setItem('bustatro_currentUser', user);
     setCurrentUser(user);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('bustatro_currentUser');
+  const handleLogout = useCallback(() => {
+    fetch('/api/logout', { method: 'POST' })
+      .catch(err => console.error('Failed to log out:', err));
     setCurrentUser(null);
-  };
+  }, []);
+
+  if (currentUser === undefined) {
+    return <div className="app" />;
+  }
 
   if (!currentUser) {
     return (
@@ -33,7 +48,7 @@ function App() {
 }
 
 function GameApp({ currentUser, onLogout }) {
-  const { state, actions } = useGameState(currentUser);
+  const { state, actions } = useGameState(currentUser, onLogout);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
 
   if (!state) {

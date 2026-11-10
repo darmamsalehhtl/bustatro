@@ -85,15 +85,21 @@ function createInitialState() {
   };
 }
 
-export function useGameState(currentUser) {
+export function useGameState(currentUser, onSessionExpired) {
   const [state, setState] = useState(null);
 
   useEffect(() => {
     if (currentUser) {
-      fetch(`/api/state/${currentUser}`)
-        .then(res => res.json())
+      fetch('/api/state')
+        .then(res => {
+          if (res.status === 401) {
+            onSessionExpired();
+            return { state: null };
+          }
+          return res.json();
+        })
         .then(data => {
-          if (data.success && data.state) {
+          if (data.state) {
             setState(data.state);
           } else {
             setState(createInitialState());
@@ -106,17 +112,23 @@ export function useGameState(currentUser) {
     } else {
       setState(createInitialState());
     }
-  }, [currentUser]);
+  }, [currentUser, onSessionExpired]);
   
   useEffect(() => {
     if (currentUser && state) {
       fetch('/api/state', {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: currentUser, state })
-      }).catch(err => console.error("Failed to save game state:", err));
+        body: JSON.stringify({ state })
+      })
+        .then(res => {
+          if (res.status === 401) {
+            onSessionExpired();
+          }
+        })
+        .catch(err => console.error("Failed to save game state:", err));
     }
-  }, [state, currentUser]);
+  }, [state, currentUser, onSessionExpired]);
   const deckRef = useRef(state?.deck || []);
   // --- Actions ---
 

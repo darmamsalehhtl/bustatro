@@ -21,6 +21,13 @@ db.exec(`
     state JSON NOT NULL,
     FOREIGN KEY(username) REFERENCES users(username)
   );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    FOREIGN KEY(username) REFERENCES users(username)
+  );
 `);
 
 // Databases created before password hashing stored plaintext in a

@@ -2,7 +2,8 @@ import express from 'express';
 import db from './db.js';
 import { rateLimit, securityHeaders } from './security.js';
 import { DUMMY_HASH, hashPassword, verifyPassword } from './passwords.js';
-import { isValidUsername, validateCredentials, validateState } from './validation.js';
+import { endSession, requireSession, sessionUser, startSession } from './sessions.js';
+import { validateCredentials, validateState } from './validation.js';
 
 const app = express();
 const PORT = 3001;
@@ -13,7 +14,6 @@ app.use(express.json({ limit: '100kb' }));
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 
-// Helper endpoints
 app.post('/api/register', authLimiter, async (req, res) => {
   const invalid = validateCredentials(req.body, { isRegistration: true });
   if (invalid) {
@@ -25,7 +25,8 @@ app.post('/api/register', authLimiter, async (req, res) => {
     const passwordHash = await hashPassword(password);
     const stmt = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)');
     stmt.run(username, passwordHash);
-    res.json({ success: true, message: 'User registered' });
+    startSession(res, username);
+    res.json({ success: true, username });
   } catch (error) {
     if (error.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
       return res.status(400).json({ error: 'Username already exists' });
@@ -44,56 +45,46 @@ app.post('/api/login', authLimiter, async (req, res) => {
   const matches = await verifyPassword(password, user?.password_hash ?? DUMMY_HASH);
 
   if (user && matches) {
-    res.json({ success: true, message: 'Login successful' });
+    startSession(res, username);
+    res.json({ success: true, username });
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
   }
 });
 
-// Save game state
-app.post('/api/state', (req, res) => {
-  const { username, state } = req.body ?? {};
-
-  if (!isValidUsername(username)) {
-    return res.status(400).json({ error: 'Invalid username' });
-  }
-  const invalidState = validateState(state);
-  if (invalidState) {
-    return res.status(400).json({ error: invalidState });
-  }
-
-  try {
-    const stmt = db.prepare(`
-      INSERT INTO game_states (username, state) 
-      VALUES (?, ?) 
-      ON CONFLICT(username) DO UPDATE SET state = excluded.state
-    `);
-    stmt.run(username, JSON.stringify(state));
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to save state' });
-  }
+app.post('/api/logout', (req, res) => {
+  endSession(req, res);
+  res.json({ success: true });
 });
 
-// Load game state
-app.get('/api/state/:username', (req, res) => {
-  const { username } = req.params;
-  if (!isValidUsername(username)) {
-    return res.status(400).json({ error: 'Invalid username' });
+app.get('/api/session', (req, res) => {
+  const username = sessionUser(req);
+  if (!username) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+  res.json({ username });
+});
+
+// Game state belongs to the logged-in user; the username comes from the
+// session, never from the request.
+app.get('/api/state', requireSession, (req, res) => {
+  const row = db.prepare('SELECT state FROM game_states WHERE username = ?').get(req.username);
+  res.json({ state: row ? JSON.parse(row.state) : null });
+});
+
+app.put('/api/state', requireSession, (req, res) => {
+  const { state } = req.body ?? {};
+  const invalid = validateState(state);
+  if (invalid) {
+    return res.status(400).json({ error: invalid });
   }
 
-  try {
-    const stmt = db.prepare('SELECT state FROM game_states WHERE username = ?');
-    const row = stmt.get(username);
-    
-    if (row) {
-      res.json({ success: true, state: JSON.parse(row.state) });
-    } else {
-      res.json({ success: false, state: null });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to load state' });
-  }
+  db.prepare(`
+    INSERT INTO game_states (username, state)
+    VALUES (?, ?)
+    ON CONFLICT(username) DO UPDATE SET state = excluded.state
+  `).run(req.username, JSON.stringify(state));
+  res.json({ success: true });
 });
 
 // Unknown errors are logged here and never sent to the client. Body-parser
