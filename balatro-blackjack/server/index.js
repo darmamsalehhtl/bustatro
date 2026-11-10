@@ -1,6 +1,7 @@
 import express from 'express';
 import db from './db.js';
 import { rateLimit, securityHeaders } from './security.js';
+import { DUMMY_HASH, hashPassword, verifyPassword } from './passwords.js';
 import { isValidUsername, validateCredentials, validateState } from './validation.js';
 
 const app = express();
@@ -13,7 +14,7 @@ app.use(express.json({ limit: '100kb' }));
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 
 // Helper endpoints
-app.post('/api/register', authLimiter, (req, res) => {
+app.post('/api/register', authLimiter, async (req, res) => {
   const invalid = validateCredentials(req.body, { isRegistration: true });
   if (invalid) {
     return res.status(400).json({ error: invalid });
@@ -21,27 +22,28 @@ app.post('/api/register', authLimiter, (req, res) => {
   const { username, password } = req.body;
 
   try {
-    const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-    stmt.run(username, password);
+    const passwordHash = await hashPassword(password);
+    const stmt = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)');
+    stmt.run(username, passwordHash);
     res.json({ success: true, message: 'User registered' });
   } catch (error) {
     if (error.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
       return res.status(400).json({ error: 'Username already exists' });
     }
-    res.status(500).json({ error: 'Internal server error' });
+    throw error;
   }
 });
 
-app.post('/api/login', authLimiter, (req, res) => {
+app.post('/api/login', authLimiter, async (req, res) => {
   if (validateCredentials(req.body)) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   const { username, password } = req.body;
 
-  const stmt = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?');
-  const user = stmt.get(username, password);
-  
-  if (user) {
+  const user = db.prepare('SELECT password_hash FROM users WHERE username = ?').get(username);
+  const matches = await verifyPassword(password, user?.password_hash ?? DUMMY_HASH);
+
+  if (user && matches) {
     res.json({ success: true, message: 'Login successful' });
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
