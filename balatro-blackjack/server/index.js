@@ -7,7 +7,7 @@ const PORT = 3001;
 
 app.disable('x-powered-by');
 app.use(securityHeaders);
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
 
 // Helper endpoints
 app.post('/api/register', (req, res) => {
@@ -79,6 +79,19 @@ app.get('/api/state/:username', (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Failed to load state' });
   }
+});
+
+// Unknown errors are logged here and never sent to the client. Body-parser
+// failures (malformed JSON, oversized body) carry a 4xx status and are safe
+// to report as such.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  const status = err.status >= 400 && err.status < 500 ? err.status : 500;
+  if (status === 500) {
+    console.error(err);
+  }
+  const messages = { 400: 'Malformed request', 413: 'Request body too large' };
+  res.status(status).json({ error: messages[status] ?? (status === 500 ? 'Internal server error' : 'Bad request') });
 });
 
 app.listen(PORT, () => {
